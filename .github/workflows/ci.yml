@@ -1,0 +1,64 @@
+name: API Tests and Docker Build
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Unit and API tests
+        run: python -m pytest tests -v
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Train CI-only fictional model (not uploaded or published)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python -m scripts.make_ci_model
+      - name: Build serving image using CI-only fictional model
+        run: docker build -t medical-risk-api:ci .
+      - name: Verify Docker live health and prediction response
+        run: |
+          docker run -d --name mlapi -p 8000:8000 medical-risk-api:ci
+          python - <<'PYCI'
+          import time,json,urllib.request,urllib.error
+          base='http://127.0.0.1:8000'
+          for i in range(50):
+              try:
+                  with urllib.request.urlopen(base+'/health',timeout=3) as r:
+                      assert r.status == 200
+                      assert json.load(r)['model_loaded'] is True
+                      break
+              except (urllib.error.URLError,TimeoutError):
+                  time.sleep(2)
+          else:
+              raise SystemExit('Health check failed')
+          record={'age':35,'sex':'female','bmi':27.1,'children':1,
+                  'smoker':'no','region':'northeast'}
+          req=urllib.request.Request(base+'/predict',data=json.dumps(record).encode(),
+                headers={'Content-Type':'application/json'}, method='POST')
+          with urllib.request.urlopen(req,timeout=10) as r:
+              assert r.status == 200
+              body=json.load(r)
+              assert 0 <= body['high_cost_probability'] <= 1
+              assert isinstance(body['predicted_high_cost'],bool)
+              print('Docker /health and /predict: passed with fictional CI-only model')
+          PYCI
