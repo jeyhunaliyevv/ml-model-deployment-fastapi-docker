@@ -1,0 +1,9 @@
+__pycache__/
+.pytest_cache/
+.venv/
+.env
+*.pyc
+models/*.joblib
+!models/.gitkeep
+data/*.csv
+!data/README.md
