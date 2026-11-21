@@ -1,0 +1,14 @@
+.git
+.github
+.venv
+__pycache__
+.pytest_cache
+*.pyc
+.env
+*.zip
+notebooks
+reports
+# Data must never be baked into the API image.
+data/
+tests/
+README.md
