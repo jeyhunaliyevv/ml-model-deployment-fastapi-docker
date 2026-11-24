@@ -1,4 +1,4 @@
-# Medical Insurance Risk — FastAPI Model Deployment
+# Medi Insurance Risk — FastAPI Model Deployment
 
 ![API Tests and Docker Build](https://github.com/jeyhunaliyevv/ml-model-deployment-fastapi-docker/actions/workflows/ci.yml/badge.svg)
 
